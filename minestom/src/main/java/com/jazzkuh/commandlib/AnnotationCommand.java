@@ -10,8 +10,8 @@ import net.minestom.server.command.CommandManager;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandContext;
-import net.minestom.server.command.builder.arguments.ArgumentLiteral;
-import net.minestom.server.command.builder.arguments.ArgumentType;
+import net.minestom.server.command.builder.arguments.ArgumentStringArray;
+import net.minestom.server.command.builder.suggestion.SuggestionEntry;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -36,8 +36,37 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         List<Method> subcommandMethods = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Subcommand.class)).toList();
         subcommandMethods.forEach(method -> this.subCommands.add(AnnotationCommandParser.parse(this, method)));
 
+        ArgumentStringArray arguments = new ArgumentStringArray("[...]");
+        arguments.setDefaultValue(new String[0]);
+        arguments.setSuggestionCallback((sender, context, suggestionCallback) -> {
+            String[] args = this.fixArguments(context.get(arguments));
+
+            List<String> suggestions = this.suggest(sender, args);
+            if (suggestions.isEmpty()) {
+                suggestionCallback.addEntry(new SuggestionEntry(""));
+                return;
+            }
+
+            for (String suggestion : suggestions) {
+                suggestionCallback.addEntry(new SuggestionEntry(suggestion, Component.empty()));
+            }
+        });
+
         setDefaultExecutor(this::execute);
+        addSyntax(this::execute, arguments);
     }
+
+    private String[] fixArguments(String[] args) {
+        // Minestom set null character to end of array
+        if (args.length > 0 && args[args.length - 1].equals("\u0000")) {
+            args = Arrays.copyOf(args, args.length);
+
+            args[args.length - 1] = "";
+        }
+
+        return args;
+    }
+
 
     @Override
     public String getCommandName() {
@@ -90,7 +119,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         }
     }
 
-    public List<ArgumentLiteral> suggest(CommandSender sender, String[] args) {
+    public List<String> suggest(CommandSender sender, String[] args) {
         AnnotationCommandExecutor<CommandSender> mainCommandExecutor = new AnnotationCommandExecutor<>(this.mainCommand, this);
         AnnotationCommandSender<CommandSender> commandSender = new AnnotationCommandSender<>(sender);
 
@@ -107,7 +136,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
                     options.add(subCommand.getName());
             }
 
-            return StringUtils.copyPartialMatches(args[0], options, new ArrayList<>(options.size())).stream().map(ArgumentType::Literal).toList();
+            return StringUtils.copyPartialMatches(args[0], options, new ArrayList<>(options.size()));
         }
 
         for (AnnotationSubCommand subCommand : this.subCommands) {
@@ -128,7 +157,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             options.addAll(subCommandExecutor.complete(commandSender, args));
         }
 
-        return options.stream().map(ArgumentType::Literal).toList();
+        return options;
     }
 
     public void register(CommandManager commandManager) {
@@ -136,14 +165,14 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     }
 
     protected void formatUsage(CommandSender sender) {
-        if (mainCommand.getUsage() != null && this.mainCommand.getUsage().length() > 0 && this.subCommands.isEmpty()) {
+        if (mainCommand.getUsage() != null && !this.mainCommand.getUsage().isEmpty() && this.subCommands.isEmpty()) {
             sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax is: ", TextColor.fromHexString("#FBFB00")));
             sender.sendMessage(Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
             return;
         }
 
         sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax's are:", TextColor.fromHexString("#FBFB00")));
-        if (mainCommand.getUsage() != null && mainCommand.getUsage().length() > 0) {
+        if (mainCommand.getUsage() != null && !mainCommand.getUsage().isEmpty()) {
             sender.sendMessage(Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
         }
 
