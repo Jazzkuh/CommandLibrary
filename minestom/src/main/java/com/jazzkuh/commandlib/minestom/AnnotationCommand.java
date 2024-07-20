@@ -1,9 +1,9 @@
-package com.jazzkuh.commandlib;
+package com.jazzkuh.commandlib.minestom;
 
 import com.jazzkuh.commandlib.common.*;
 import com.jazzkuh.commandlib.common.annotations.Main;
 import com.jazzkuh.commandlib.common.annotations.Subcommand;
-import com.jazzkuh.commandlib.utils.StringUtils;
+import com.jazzkuh.commandlib.minestom.utils.StringUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.minestom.server.command.CommandManager;

@@ -1,4 +1,4 @@
-package com.jazzkuh.commandlib.utils;
+package com.jazzkuh.commandlib.minestom.utils;
 
 import lombok.experimental.UtilityClass;
 import org.jetbrains.annotations.NotNull;
