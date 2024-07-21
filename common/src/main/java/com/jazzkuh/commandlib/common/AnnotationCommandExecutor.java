@@ -4,6 +4,7 @@ import com.jazzkuh.commandlib.common.annotations.Completion;
 import com.jazzkuh.commandlib.common.annotations.Greedy;
 import com.jazzkuh.commandlib.common.annotations.Main;
 import com.jazzkuh.commandlib.common.annotations.Optional;
+import com.jazzkuh.commandlib.common.exception.*;
 import com.jazzkuh.commandlib.common.resolvers.CompletionResolver;
 import com.jazzkuh.commandlib.common.resolvers.CompletionResolverRegistry;
 import com.jazzkuh.commandlib.common.resolvers.ContextResolver;
@@ -15,7 +16,7 @@ import java.util.*;
 import java.util.stream.StreamSupport;
 
 public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, AnnotationCommandImpl annotationCommand) {
-    public CommandResult execute(AnnotationCommandSender<T> sender, String[] args) {
+    public void execute(AnnotationCommandSender<T> sender, String[] args) throws CommandException {
         Method method = this.subCommand.getMethod();
         List<Parameter> parameters = Arrays.stream(this.subCommand.getMethod().getParameters()).toList();
 
@@ -25,14 +26,14 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
         int size = parameters.stream().filter(parameter -> !parameter.isAnnotationPresent(Optional.class)).toList().size();
         int paramSize = method.isAnnotationPresent(Main.class) ? size - 1 : size;
 
-        if (args.length < paramSize) return CommandResult.NOT_ENOUGH_ARGUMENTS;
-        if (!method.getParameterTypes()[0].isInstance(sender.getSender())) return CommandResult.NOT_ALLOWED;
+        if (args.length < paramSize) throw new ArgumentException();
+        if (!method.getParameterTypes()[0].isInstance(sender.getSender())) throw new PermissionException("You are not allowed to execute this command.");
 
         for (int i = 1; i < parameters.size(); i++) {
             Parameter parameter = parameters.get(i);
             Class<?> paramClass = parameter.getType();
             ContextResolver<?> contextResolver = ContextResolverRegistry.getResolver(paramClass);
-            if (contextResolver == null) return CommandResult.CONTEXT_RESOLVER_NOT_FOUND;
+            if (contextResolver == null) throw new ContextResolverException(paramClass.getName());
 
             int argumentIndex = method.isAnnotationPresent(Main.class) ? i - 1 : i;
             if (args.length <= argumentIndex && parameter.isAnnotationPresent(Optional.class)) {
@@ -45,7 +46,7 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
                 }
 
                 Object resolvedObject = contextResolver.resolve(method.isAnnotationPresent(Main.class) ? args[i - 1] : args[i]);
-                if (resolvedObject == null) return CommandResult.PARAMETER_INVALID;
+                if (resolvedObject == null) throw new ParameterException();
                 resolvedParameters[i] = resolvedObject;
             }
         }
@@ -53,10 +54,9 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
         try {
             method.setAccessible(true);
             method.invoke(this.annotationCommand, resolvedParameters);
-            return CommandResult.SUCCESS;
         } catch (Exception exception) {
             exception.printStackTrace();
-            return CommandResult.ERROR;
+            throw new ErrorException(exception.getMessage());
         }
     }
 
@@ -113,14 +113,5 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
             return false;
         }
         return string.regionMatches(true, 0, prefix, 0, prefix.length());
-    }
-
-    public enum CommandResult {
-        SUCCESS,
-        NOT_ENOUGH_ARGUMENTS,
-        NOT_ALLOWED,
-        CONTEXT_RESOLVER_NOT_FOUND,
-        PARAMETER_INVALID,
-        ERROR
     }
 }

@@ -3,6 +3,7 @@ package com.jazzkuh.commandlib.velocity;
 import com.jazzkuh.commandlib.common.*;
 import com.jazzkuh.commandlib.common.annotations.Main;
 import com.jazzkuh.commandlib.common.annotations.Subcommand;
+import com.jazzkuh.commandlib.common.exception.*;
 import com.jazzkuh.commandlib.velocity.utils.StringUtils;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.command.CommandSource;
@@ -72,13 +73,20 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
         AnnotationCommandExecutor<CommandSource> commandExecutor = new AnnotationCommandExecutor<>(subCommand, this);
         AnnotationCommandSender<CommandSource> commandSender = new AnnotationCommandSender<>(sender);
 
-        AnnotationCommandExecutor.CommandResult commandResult = commandExecutor.execute(commandSender, args);
-        switch (commandResult) {
-            case NOT_ENOUGH_ARGUMENTS -> this.formatUsage(sender);
-            case ERROR -> sender.sendMessage(Component.text("An error occurred while executing this subcommand.", TextColor.fromHexString("#FB465C")));
-            case NOT_ALLOWED -> sender.sendMessage(Component.text("You are not allowed to execute this command.", TextColor.fromHexString("#FB465C")));
-            case CONTEXT_RESOLVER_NOT_FOUND -> sender.sendMessage(Component.text("A context resolver was not found for one of the parameters.", TextColor.fromHexString("#FB465C")));
-            case PARAMETER_INVALID -> sender.sendMessage(Component.text("One of the parameters was invalid.", TextColor.fromHexString("#FB465C")));
+        try {
+            commandExecutor.execute(commandSender, args);
+        } catch (CommandException commandException) {
+            if (commandException instanceof ArgumentException) {
+                this.formatUsage(sender);
+            } else if (commandException instanceof PermissionException permissionException) {
+                sender.sendMessage(Component.text(permissionException.getMessage(), TextColor.fromHexString("#FB465C")));
+            } else if (commandException instanceof ContextResolverException contextResolverException) {
+                sender.sendMessage(Component.text("A context resolver was not found for: " + contextResolverException.getMessage(), TextColor.fromHexString("#FB465C")));
+            } else if (commandException instanceof ParameterException) {
+                sender.sendMessage(Component.text("One of the parameters was invalid.", TextColor.fromHexString("#FB465C")));
+            } else if (commandException instanceof ErrorException errorException) {
+                sender.sendMessage(Component.text("An error occurred while executing this subcommand: " + errorException.getMessage(), TextColor.fromHexString("#FB465C")));
+            }
         }
     }
 
