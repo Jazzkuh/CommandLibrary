@@ -82,8 +82,8 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
                 sender.sendMessage(Component.text(permissionException.getMessage(), TextColor.fromHexString("#FB465C")));
             } else if (commandException instanceof ContextResolverException contextResolverException) {
                 sender.sendMessage(Component.text("A context resolver was not found for: " + contextResolverException.getMessage(), TextColor.fromHexString("#FB465C")));
-            } else if (commandException instanceof ParameterException) {
-                sender.sendMessage(Component.text("One of the parameters was invalid.", TextColor.fromHexString("#FB465C")));
+            } else if (commandException instanceof ParameterException parameterException) {
+                sender.sendMessage(Component.text(parameterException.getMessage(), TextColor.fromHexString("#FB465C")));
             } else if (commandException instanceof ErrorException errorException) {
                 sender.sendMessage(Component.text("An error occurred while executing this subcommand: " + errorException.getMessage(), TextColor.fromHexString("#FB465C")));
             }

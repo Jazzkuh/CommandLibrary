@@ -32,8 +32,26 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
         for (int i = 1; i < parameters.size(); i++) {
             Parameter parameter = parameters.get(i);
             Class<?> paramClass = parameter.getType();
+
             ContextResolver<?> contextResolver = ContextResolverRegistry.getResolver(paramClass);
-            if (contextResolver == null) throw new ContextResolverException(paramClass.getName());
+            if (contextResolver == null) {
+                if (!paramClass.isEnum()) throw new ContextResolverException(paramClass.getName());
+
+                int argumentIndex = method.isAnnotationPresent(Main.class) ? i - 1 : i;
+                if (args.length <= argumentIndex && parameter.isAnnotationPresent(Optional.class)) {
+                    resolvedParameters[i] = null;
+                } else {
+                    Object resolvedObject;
+                    try {
+                        resolvedObject = Enum.valueOf((Class<? extends Enum>) paramClass, method.isAnnotationPresent(Main.class) ? args[i - 1].toUpperCase() : args[i].toUpperCase());
+                    } catch (Exception exception) {
+                        throw new ParameterException("Cannot resolver parameter " + (method.isAnnotationPresent(Main.class) ? args[i - 1] : args[i]) + " for type " + paramClass.getSimpleName());
+                    }
+
+                    resolvedParameters[i] = resolvedObject;
+                }
+                continue;
+            }
 
             int argumentIndex = method.isAnnotationPresent(Main.class) ? i - 1 : i;
             if (args.length <= argumentIndex && parameter.isAnnotationPresent(Optional.class)) {
@@ -46,7 +64,9 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
                 }
 
                 Object resolvedObject = contextResolver.resolve(method.isAnnotationPresent(Main.class) ? args[i - 1] : args[i]);
-                if (resolvedObject == null) throw new ParameterException();
+                if (resolvedObject == null) {
+                    throw new ParameterException("Cannot resolver parameter " + (method.isAnnotationPresent(Main.class) ? args[i - 1] : args[i]) + " for type " + paramClass.getSimpleName());
+                }
                 resolvedParameters[i] = resolvedObject;
             }
         }
@@ -88,6 +108,8 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
         CompletionResolver<T> completionResolver = CompletionResolverRegistry.getResolver(paramClass);
         if (completionResolver != null) {
             return copyPartialMatches(arg, completionResolver.resolve(sender, arg), new ArrayList<>(completionResolver.resolve(sender, arg).size()));
+        } else if (paramClass.isEnum()) {
+            return copyPartialMatches(arg, EnumSet.allOf((Class<? extends Enum>) paramClass).stream().map(value -> value.toString().toLowerCase()).toList(), new ArrayList<>(EnumSet.allOf((Class<? extends Enum>) paramClass).size()));
         }
 
         return options;
