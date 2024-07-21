@@ -14,19 +14,16 @@ import net.minestom.server.command.builder.arguments.ArgumentStringArray;
 import net.minestom.server.command.builder.suggestion.SuggestionEntry;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class AnnotationCommand extends Command implements AnnotationCommandImpl {
     private final String commandName;
     private AnnotationSubCommand mainCommand = null;
     private final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
-    public AnnotationCommand(String commandName) {
-        super(commandName);
+    public AnnotationCommand(String commandName, String... aliases) {
+        super(commandName, aliases);
         this.commandName = commandName;
-
         List<Method> mainCommands = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Main.class)).toList();
         if (mainCommands.size() > 1) {
             throw new IllegalArgumentException("There can only be one main command per class");
@@ -48,12 +45,15 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             }
 
             for (String suggestion : suggestions) {
-                suggestionCallback.addEntry(new SuggestionEntry(suggestion, Component.empty()));
+                suggestionCallback.addEntry(new SuggestionEntry(suggestion));
             }
         });
 
         setDefaultExecutor(this::execute);
         addSyntax(this::execute, arguments);
+        if (this.mainCommand.getPermission() != null) {
+            setCondition((commandSender, s) -> commandSender.hasPermission(this.mainCommand.getPermission()));
+        }
     }
 
     private String[] fixArguments(String[] args) {
@@ -161,7 +161,15 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     }
 
     public void register(CommandManager commandManager) {
-        commandManager.register(this);
+        try {
+            commandManager.register(this);
+            System.out.println("Registered command: " + this.getCommandName());
+            if (!Arrays.stream(this.getAliases()).toList().isEmpty()) {
+                System.out.println("- Registered aliases: " + String.join(", ", this.getAliases()));
+            }
+        } catch (Exception exception) {
+            System.err.println("Unable to register command: " + this.getCommandName());
+        }
     }
 
     protected void formatUsage(CommandSender sender) {
