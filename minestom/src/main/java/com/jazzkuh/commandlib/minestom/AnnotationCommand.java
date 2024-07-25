@@ -4,20 +4,26 @@ import com.jazzkuh.commandlib.common.*;
 import com.jazzkuh.commandlib.common.annotations.Main;
 import com.jazzkuh.commandlib.common.annotations.Subcommand;
 import com.jazzkuh.commandlib.common.exception.*;
+import com.jazzkuh.commandlib.minestom.terminal.LoggingConsoleSender;
 import com.jazzkuh.commandlib.minestom.utils.StringUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import net.minestom.server.command.CommandManager;
 import net.minestom.server.command.CommandSender;
+import net.minestom.server.command.ConsoleSender;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.arguments.ArgumentStringArray;
 import net.minestom.server.command.builder.suggestion.SuggestionEntry;
+import net.minestom.server.entity.Player;
 
 import java.lang.reflect.Method;
 import java.util.*;
 
 public class AnnotationCommand extends Command implements AnnotationCommandImpl {
+    private static final ComponentLogger LOGGER = ComponentLogger.logger("CommandLibrary");
+
     private final String commandName;
     private AnnotationSubCommand mainCommand = null;
     private final List<AnnotationSubCommand> subCommands = new ArrayList<>();
@@ -98,7 +104,12 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     }
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSender sender, String[] args) {
-        if (subCommand.getPermission() != null && !sender.hasPermission(subCommand.getPermission())) {
+        if (sender instanceof ConsoleSender) sender = new LoggingConsoleSender();
+        if (sender instanceof Player player) {
+            LOGGER.info("Command executed by {}: {} {}", player.getUsername(), this.getCommandName(), String.join(" ", args));
+        }
+
+        if (subCommand.getPermission() != null && !(sender instanceof ConsoleSender) && !sender.hasPermission(subCommand.getPermission())) {
             sender.sendMessage(Component.text("You do not have permission to use this command.", TextColor.fromHexString("#FB465C")));
             return;
         }
@@ -167,12 +178,12 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     public void register(CommandManager commandManager) {
         try {
             commandManager.register(this);
-            System.out.println("Registered command: " + this.getCommandName());
+            LOGGER.info("Registered command: {}", this.getCommandName());
             if (!Arrays.stream(this.getAliases()).toList().isEmpty()) {
-                System.out.println("- Registered aliases: " + String.join(", ", this.getAliases()));
+                LOGGER.info("- Registered aliases: {}", String.join(", ", this.getAliases()));
             }
         } catch (Exception exception) {
-            System.err.println("Unable to register command: " + this.getCommandName());
+            LOGGER.info("Unable to register command: {}", this.getCommandName());
         }
     }
 

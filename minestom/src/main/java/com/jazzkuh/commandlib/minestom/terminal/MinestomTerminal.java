@@ -53,7 +53,7 @@ public class MinestomTerminal {
                     return;
                 }
             }
-        }, "Jline");
+        }, "CommandLibrary");
         thread.setDaemon(true);
         thread.start();
     }
