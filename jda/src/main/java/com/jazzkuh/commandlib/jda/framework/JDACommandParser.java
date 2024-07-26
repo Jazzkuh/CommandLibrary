@@ -2,7 +2,9 @@ package com.jazzkuh.commandlib.jda.framework;
 
 import com.jazzkuh.commandlib.common.AnnotationCommandImpl;
 import com.jazzkuh.commandlib.common.annotations.*;
+import com.jazzkuh.commandlib.jda.annotations.DiscordPermission;
 import com.jazzkuh.commandlib.jda.annotations.Option;
+import net.dv8tion.jda.api.Permission;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -10,11 +12,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class AnnotationCommandParser {
-    public static AnnotationSubCommand parse(AnnotationCommandImpl baseCommand, Method method) {
+public class JDACommandParser {
+    public static JDASubCommand parse(AnnotationCommandImpl baseCommand, Method method) {
         String name = null;
         List<String> aliases = new ArrayList<>();
-        String permission = null;
+        Permission permission = null;
         String description = "No description provided";
         String usage = "";
         List<CommandParameter> commandParameters = new ArrayList<>();
@@ -29,7 +31,7 @@ public class AnnotationCommandParser {
         }
 
         if (method.isAnnotationPresent(Description.class)) description = method.getAnnotation(Description.class).value();
-        if (method.isAnnotationPresent(Permission.class)) permission = method.getAnnotation(Permission.class).value();
+        if (method.isAnnotationPresent(DiscordPermission.class)) permission = method.getAnnotation(DiscordPermission.class).value();
         if (method.isAnnotationPresent(Usage.class)) usage = method.getAnnotation(Usage.class).value();
 
         List<Parameter> parameters = Arrays.stream(method.getParameters()).toList();
@@ -64,6 +66,6 @@ public class AnnotationCommandParser {
             commandParameters.add(new CommandParameter(option.value(), option.description(), parameter.isAnnotationPresent(Optional.class), paramClass));
         }
 
-        return new AnnotationSubCommand(name, usage, aliases, description, permission, method, commandParameters);
+        return new JDASubCommand(name, usage, aliases, description, permission, method, commandParameters);
     }
 }

@@ -3,13 +3,15 @@ package com.jazzkuh.commandlib.jda;
 import com.jazzkuh.commandlib.common.AnnotationCommandImpl;
 import com.jazzkuh.commandlib.common.AnnotationCommandSender;
 import com.jazzkuh.commandlib.common.annotations.*;
-import com.jazzkuh.commandlib.jda.framework.AnnotationCommandExecutor;
-import com.jazzkuh.commandlib.jda.framework.AnnotationCommandParser;
-import com.jazzkuh.commandlib.jda.framework.AnnotationSubCommand;
+import com.jazzkuh.commandlib.common.exception.*;
+import com.jazzkuh.commandlib.jda.framework.JDACommandExecutor;
+import com.jazzkuh.commandlib.jda.framework.JDACommandParser;
+import com.jazzkuh.commandlib.jda.framework.JDASubCommand;
 import com.jazzkuh.commandlib.jda.framework.CommandParameter;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
@@ -24,8 +26,8 @@ import java.util.List;
 
 public class AnnotationCommand extends ListenerAdapter implements AnnotationCommandImpl {
     private final String commandName;
-    private AnnotationSubCommand mainCommand = null;
-    private final List<AnnotationSubCommand> subCommands = new ArrayList<>();
+    private JDASubCommand mainCommand = null;
+    private final List<JDASubCommand> subCommands = new ArrayList<>();
 
     public AnnotationCommand(String commandName) {
         this.commandName = commandName;
@@ -34,10 +36,10 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
         if (mainCommands.size() > 1) {
             throw new IllegalArgumentException("There can only be one main command per class");
         }
-        mainCommands.forEach(method -> this.mainCommand = AnnotationCommandParser.parse(this, method));
+        mainCommands.forEach(method -> this.mainCommand = JDACommandParser.parse(this, method));
 
         List<Method> subcommandMethods = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Subcommand.class)).toList();
-        subcommandMethods.forEach(method -> this.subCommands.add(AnnotationCommandParser.parse(this, method)));
+        subcommandMethods.forEach(method -> this.subCommands.add(JDACommandParser.parse(this, method)));
     }
 
     @Override
@@ -65,7 +67,7 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
             return;
         }
 
-        for (AnnotationSubCommand subCommand : subCommands) {
+        for (JDASubCommand subCommand : subCommands) {
             if (!args[0].equalsIgnoreCase(subCommand.getName()) && !subCommand.getAliases().contains(args[0].toLowerCase())) continue;
             this.executeCommand(subCommand, event, args);
             return;
@@ -74,19 +76,29 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
         this.executeCommand(this.mainCommand, event, args);
     }
 
-    private void executeCommand(AnnotationSubCommand subCommand, SlashCommandInteractionEvent event, String[] args) {
-        // TODO permission check
+    private void executeCommand(JDASubCommand subCommand, SlashCommandInteractionEvent event, String[] args) {
+        if (subCommand.getPermission() != null && !event.getMember().hasPermission(subCommand.getPermission())) {
+            event.reply("You do not have permission to execute this command.").queue();
+            return;
+        }
 
-        AnnotationCommandExecutor<SlashCommandInteractionEvent> commandExecutor = new AnnotationCommandExecutor<>(subCommand, this);
+        JDACommandExecutor<SlashCommandInteractionEvent> commandExecutor = new JDACommandExecutor<>(subCommand, this);
         AnnotationCommandSender<SlashCommandInteractionEvent> commandSender = new AnnotationCommandSender<>(event);
 
-        AnnotationCommandExecutor.CommandResult commandResult = commandExecutor.execute(commandSender, args);
-        switch (commandResult) {
-            case NOT_ENOUGH_ARGUMENTS -> event.reply("Not enough arguments.").queue();
-            case ERROR -> event.reply("An error occurred while executing the command.").queue();
-            case NOT_ALLOWED -> event.reply("You are not allowed to execute this command.").queue();
-            case CONTEXT_RESOLVER_NOT_FOUND -> event.reply("A context resolver for one of the parameters was not found.").queue();
-            case PARAMETER_INVALID -> event.reply("One of the parameters is invalid.").queue();
+        try {
+            commandExecutor.execute(commandSender, args);
+        } catch (CommandException commandException) {
+            if (commandException instanceof ArgumentException) {
+                event.reply("Not enough arguments.").queue();
+            } else if (commandException instanceof PermissionException permissionException) {
+                event.reply(permissionException.getMessage()).queue();
+            } else if (commandException instanceof ContextResolverException contextResolverException) {
+                event.reply("A context resolver was not found for: " + contextResolverException.getMessage()).queue();
+            } else if (commandException instanceof ParameterException parameterException) {
+                event.reply(parameterException.getMessage()).queue();
+            } else if (commandException instanceof ErrorException errorException) {
+                event.reply("An error occurred while executing this subcommand: " + errorException.getMessage()).queue();
+            }
         }
     }
 
@@ -97,6 +109,10 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
                 OptionType type = JDACommandLoader.DEFINITIONS.get(parameter.getType());
                 if (type == null) type = OptionType.STRING;
 
+                if (mainCommand.getPermission() != null) {
+                    commandData = commandData.setDefaultPermissions(DefaultMemberPermissions.enabledFor(mainCommand.getPermission()));
+                }
+
                 commandData.addOption(
                         type,
                         parameter.getName(),
@@ -106,11 +122,15 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
             }
         }
 
-        for (AnnotationSubCommand subCommand : subCommands) {
+        for (JDASubCommand subCommand : subCommands) {
             SubcommandData subcommandData = new SubcommandData(subCommand.getName(), subCommand.getDescription());
             for (CommandParameter parameter : subCommand.getCommandParameters()) {
                 OptionType type = JDACommandLoader.DEFINITIONS.get(parameter.getType());
                 if (type == null) type = OptionType.STRING;
+
+                if (subCommand.getPermission() != null) {
+                    commandData = commandData.setDefaultPermissions(DefaultMemberPermissions.enabledFor(subCommand.getPermission()));
+                }
 
                 subcommandData.addOption(
                         type,
