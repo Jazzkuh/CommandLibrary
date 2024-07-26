@@ -11,7 +11,7 @@ import com.jazzkuh.commandlib.jda.framework.CommandParameter;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
+import net.dv8tion.jda.api.interactions.InteractionType;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
@@ -50,6 +50,7 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         SlashCommandInteraction interaction = event.getInteraction();
+        if (event.getInteraction().getType() != InteractionType.COMMAND) return;
         if (!interaction.getName().equalsIgnoreCase(this.commandName)) return;
 
         String[] args = interaction.getOptions()
@@ -87,17 +88,21 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
 
         try {
             commandExecutor.execute(commandSender, args);
+            System.out.println("Executed command " + subCommand.getName());
         } catch (CommandException commandException) {
-            if (commandException instanceof ArgumentException) {
-                event.getChannel().sendMessage("Not enough arguments.").queue();
-            } else if (commandException instanceof PermissionException permissionException) {
-                event.getChannel().sendMessage(permissionException.getMessage()).queue();
-            } else if (commandException instanceof ContextResolverException contextResolverException) {
-                event.getChannel().sendMessage("A context resolver was not found for: " + contextResolverException.getMessage()).queue();
-            } else if (commandException instanceof ParameterException parameterException) {
-                event.getChannel().sendMessage(parameterException.getMessage()).queue();
-            } else if (commandException instanceof ErrorException errorException) {
-                event.getChannel().sendMessage("An error occurred while executing this subcommand: " + errorException.getMessage()).queue();
+            switch (commandException) {
+                case ArgumentException ignored ->
+                        event.reply("Not enough arguments.").queue();
+                case PermissionException permissionException ->
+                        event.reply(permissionException.getMessage()).queue();
+                case ContextResolverException contextResolverException ->
+                        event.reply("A context resolver was not found for: " + contextResolverException.getMessage()).queue();
+                case ParameterException parameterException ->
+                        event.reply(parameterException.getMessage()).queue();
+                case ErrorException errorException ->
+                        event.reply("An error occurred while executing this subcommand: " + errorException.getMessage()).queue();
+                default -> {
+                }
             }
         }
     }
@@ -136,6 +141,5 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
 
         System.out.println("Registered command " + commandName);
         JDACommandLoader.getToPropagate().add(commandData);
-        jda.addEventListener(this);
     }
 }
