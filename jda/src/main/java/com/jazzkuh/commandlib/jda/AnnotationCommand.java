@@ -89,15 +89,15 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
             commandExecutor.execute(commandSender, args);
         } catch (CommandException commandException) {
             if (commandException instanceof ArgumentException) {
-                event.reply("Not enough arguments.").queue();
+                event.getChannel().sendMessage("Not enough arguments.").queue();
             } else if (commandException instanceof PermissionException permissionException) {
-                event.reply(permissionException.getMessage()).queue();
+                event.getChannel().sendMessage(permissionException.getMessage()).queue();
             } else if (commandException instanceof ContextResolverException contextResolverException) {
-                event.reply("A context resolver was not found for: " + contextResolverException.getMessage()).queue();
+                event.getChannel().sendMessage("A context resolver was not found for: " + contextResolverException.getMessage()).queue();
             } else if (commandException instanceof ParameterException parameterException) {
-                event.reply(parameterException.getMessage()).queue();
+                event.getChannel().sendMessage(parameterException.getMessage()).queue();
             } else if (commandException instanceof ErrorException errorException) {
-                event.reply("An error occurred while executing this subcommand: " + errorException.getMessage()).queue();
+                event.getChannel().sendMessage("An error occurred while executing this subcommand: " + errorException.getMessage()).queue();
             }
         }
     }
@@ -108,10 +108,6 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
             for (CommandParameter parameter : mainCommand.getCommandParameters()) {
                 OptionType type = JDACommandLoader.DEFINITIONS.get(parameter.getType());
                 if (type == null) type = OptionType.STRING;
-
-                if (mainCommand.getPermission() != null) {
-                    commandData = commandData.setDefaultPermissions(DefaultMemberPermissions.enabledFor(mainCommand.getPermission()));
-                }
 
                 commandData.addOption(
                         type,
@@ -127,10 +123,6 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
             for (CommandParameter parameter : subCommand.getCommandParameters()) {
                 OptionType type = JDACommandLoader.DEFINITIONS.get(parameter.getType());
                 if (type == null) type = OptionType.STRING;
-
-                if (subCommand.getPermission() != null) {
-                    commandData = commandData.setDefaultPermissions(DefaultMemberPermissions.enabledFor(subCommand.getPermission()));
-                }
 
                 subcommandData.addOption(
                         type,
