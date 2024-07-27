@@ -15,6 +15,7 @@ import net.minestom.server.command.ConsoleSender;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.arguments.ArgumentStringArray;
+import net.minestom.server.command.builder.parser.ArgumentParser;
 import net.minestom.server.command.builder.suggestion.SuggestionEntry;
 import net.minestom.server.entity.Player;
 
@@ -46,13 +47,11 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             String[] args = this.fixArguments(context.get(arguments));
 
             List<String> suggestions = this.suggest(sender, args);
-            if (suggestions.isEmpty()) {
-                suggestionCallback.addEntry(new SuggestionEntry(""));
-                return;
-            }
-
+            if (suggestions.isEmpty()) return;
             for (String suggestion : suggestions) {
-                suggestionCallback.addEntry(new SuggestionEntry(suggestion));
+                SuggestionEntry suggestionEntry = new SuggestionEntry(suggestion);
+                if (suggestionCallback.getEntries().contains(suggestionEntry)) continue;
+                suggestionCallback.addEntry(suggestionEntry);
             }
         });
 
