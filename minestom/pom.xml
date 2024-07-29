@@ -16,7 +16,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <minestom.version>master-f1d5940855-1</minestom.version>
+        <minestom.version>12794d4263</minestom.version>
     </properties>
 
     <repositories>
@@ -35,8 +35,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.github.Minestom</groupId>
-            <artifactId>Minestom</artifactId>
+            <groupId>net.minestom</groupId>
+            <artifactId>minestom-snapshots</artifactId>
             <version>${minestom.version}</version>
             <scope>provided</scope>
         </dependency>
