@@ -6,6 +6,7 @@ import com.jazzkuh.commandlib.common.annotations.Subcommand;
 import com.jazzkuh.commandlib.common.exception.*;
 import com.jazzkuh.commandlib.minestom.terminal.LoggingConsoleSender;
 import com.jazzkuh.commandlib.minestom.utils.StringUtils;
+import lombok.SneakyThrows;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
@@ -17,7 +18,9 @@ import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.arguments.ArgumentStringArray;
 import net.minestom.server.command.builder.suggestion.SuggestionEntry;
 import net.minestom.server.entity.Player;
+import org.codehaus.plexus.util.ReflectionUtils;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -28,14 +31,36 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     protected AnnotationSubCommand mainCommand = null;
     protected final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
-    public AnnotationCommand(String commandName, String... aliases) {
-        super(commandName, aliases);
-        this.commandName = commandName;
+    @SneakyThrows
+    public AnnotationCommand() {
+        super("__annotation_command__");
+        if (!this.getClass().isAnnotationPresent(com.jazzkuh.commandlib.common.annotations.Command.class)) {
+            throw new IllegalArgumentException("AnnotationCommand needs to have a @Command annotation!");
+        }
+
+        this.commandName = this.getClass().getAnnotation(com.jazzkuh.commandlib.common.annotations.Command.class).value();
+
+        Field nameField = ReflectionUtils.getFieldByNameIncludingSuperclasses("name", Command.class);
+        nameField.setAccessible(true);
+        nameField.set(this, this.commandName);
+
         List<Method> mainCommands = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Main.class)).toList();
         if (mainCommands.size() > 1) {
             throw new IllegalArgumentException("There can only be one main command per class");
         }
         mainCommands.forEach(method -> this.mainCommand = AnnotationCommandParser.parse(this, method));
+
+        Field aliasesField = ReflectionUtils.getFieldByNameIncludingSuperclasses("aliases", Command.class);
+        aliasesField.setAccessible(true);
+        aliasesField.set(this, this.mainCommand.getAliases().toArray(new String[0]));
+
+        List<String> names = new ArrayList<>();
+        names.add(this.commandName);
+        names.addAll(this.mainCommand.getAliases());
+
+        Field namesField = ReflectionUtils.getFieldByNameIncludingSuperclasses("names", Command.class);
+        namesField.setAccessible(true);
+        namesField.set(this, names.toArray(new String[0]));
 
         List<Method> subcommandMethods = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Subcommand.class)).toList();
         subcommandMethods.forEach(method -> this.subCommands.add(AnnotationCommandParser.parse(this, method)));

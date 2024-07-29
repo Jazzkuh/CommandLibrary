@@ -26,9 +26,14 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     private AnnotationSubCommand mainCommand = null;
     private final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
-    public AnnotationCommand(String commandName) {
-        super(commandName);
-        this.commandName = commandName;
+    public AnnotationCommand() {
+        super("__annotation_command__");
+        if (!this.getClass().isAnnotationPresent(com.jazzkuh.commandlib.common.annotations.Command.class)) {
+            throw new IllegalArgumentException("AnnotationCommand needs to have a @Command annotation!");
+        }
+
+        this.commandName = this.getClass().getAnnotation(com.jazzkuh.commandlib.common.annotations.Command.class).value();
+        this.setName(this.commandName);
 
         List<Method> mainCommands = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Main.class)).toList();
         if (mainCommands.size() > 1) {

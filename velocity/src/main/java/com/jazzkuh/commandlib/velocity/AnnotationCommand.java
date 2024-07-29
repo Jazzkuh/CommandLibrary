@@ -21,8 +21,12 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
     private AnnotationSubCommand mainCommand = null;
     private final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
-    public AnnotationCommand(String commandName) {
-        this.commandName = commandName;
+    public AnnotationCommand() {
+        if (!this.getClass().isAnnotationPresent(com.jazzkuh.commandlib.common.annotations.Command.class)) {
+            throw new IllegalArgumentException("AnnotationCommand needs to have a @Command annotation!");
+        }
+
+        this.commandName = this.getClass().getAnnotation(com.jazzkuh.commandlib.common.annotations.Command.class).value();
 
         List<Method> mainCommands = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Main.class)).toList();
         if (mainCommands.size() > 1) {
@@ -61,7 +65,6 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
         }
 
         this.executeCommand(this.mainCommand, sender, args);
-        return;
     }
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSource sender, String[] args) {
