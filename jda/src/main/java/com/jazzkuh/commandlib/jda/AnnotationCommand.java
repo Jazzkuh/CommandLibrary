@@ -91,16 +91,11 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
             System.out.println("Executed command " + subCommand.getName());
         } catch (CommandException commandException) {
             switch (commandException) {
-                case ArgumentException ignored ->
-                        event.reply("Not enough arguments.").queue();
-                case PermissionException permissionException ->
-                        event.reply(permissionException.getMessage()).queue();
-                case ContextResolverException contextResolverException ->
-                        event.reply("A context resolver was not found for: " + contextResolverException.getMessage()).queue();
-                case ParameterException parameterException ->
-                        event.reply(parameterException.getMessage()).queue();
-                case ErrorException errorException ->
-                        event.reply("An error occurred while executing this subcommand: " + errorException.getMessage()).queue();
+                case ArgumentException ignored -> event.reply("Not enough arguments.").queue();
+                case PermissionException permissionException -> event.reply(permissionException.getMessage()).queue();
+                case ContextResolverException contextResolverException -> event.reply("A context resolver was not found for: " + contextResolverException.getMessage()).queue();
+                case ParameterException parameterException -> event.reply(parameterException.getMessage()).queue();
+                case ErrorException errorException -> event.reply("An error occurred while executing this subcommand: " + errorException.getMessage()).queue();
                 default -> {
                 }
             }

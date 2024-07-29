@@ -15,7 +15,6 @@ import net.minestom.server.command.ConsoleSender;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandContext;
 import net.minestom.server.command.builder.arguments.ArgumentStringArray;
-import net.minestom.server.command.builder.parser.ArgumentParser;
 import net.minestom.server.command.builder.suggestion.SuggestionEntry;
 import net.minestom.server.entity.Player;
 
@@ -25,9 +24,9 @@ import java.util.*;
 public class AnnotationCommand extends Command implements AnnotationCommandImpl {
     private static final ComponentLogger LOGGER = ComponentLogger.logger("CommandLibrary");
 
-    private final String commandName;
-    private AnnotationSubCommand mainCommand = null;
-    private final List<AnnotationSubCommand> subCommands = new ArrayList<>();
+    protected final String commandName;
+    protected AnnotationSubCommand mainCommand = null;
+    protected final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
     public AnnotationCommand(String commandName, String... aliases) {
         super(commandName, aliases);
@@ -109,7 +108,8 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         }
 
         if (subCommand.getPermission() != null && !(sender instanceof ConsoleSender) && !sender.hasPermission(subCommand.getPermission())) {
-            sender.sendMessage(Component.text("You do not have permission to use this command.", TextColor.fromHexString("#FB465C")));
+            PermissionException permissionException = new PermissionException("You do not have permission to use this command.");
+            sender.sendMessage(MinestomCommandLoader.getFormattingProvider().formatError(permissionException, permissionException.getMessage()));
             return;
         }
 
@@ -122,13 +122,13 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             if (commandException instanceof ArgumentException) {
                 this.formatUsage(sender);
             } else if (commandException instanceof PermissionException permissionException) {
-                sender.sendMessage(Component.text(permissionException.getMessage(), TextColor.fromHexString("#FB465C")));
+                sender.sendMessage(MinestomCommandLoader.getFormattingProvider().formatError(commandException, permissionException.getMessage()));
             } else if (commandException instanceof ContextResolverException contextResolverException) {
-                sender.sendMessage(Component.text("A context resolver was not found for: " + contextResolverException.getMessage(), TextColor.fromHexString("#FB465C")));
+                sender.sendMessage(MinestomCommandLoader.getFormattingProvider().formatError(commandException, "A context resolver was not found for: " + contextResolverException.getMessage()));
             } else if (commandException instanceof ParameterException parameterException) {
-                sender.sendMessage(Component.text(parameterException.getMessage(), TextColor.fromHexString("#FB465C")));
+                sender.sendMessage(MinestomCommandLoader.getFormattingProvider().formatError(commandException, parameterException.getMessage()));
             } else if (commandException instanceof ErrorException errorException) {
-                sender.sendMessage(Component.text("An error occurred while executing this subcommand: " + errorException.getMessage(), TextColor.fromHexString("#FB465C")));
+                sender.sendMessage(MinestomCommandLoader.getFormattingProvider().formatError(commandException, "An error occurred while executing this subcommand: " + errorException.getMessage()));
             }
         }
     }
@@ -186,7 +186,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         }
     }
 
-    protected void formatUsage(CommandSender sender) {
+    public void formatUsage(CommandSender sender) {
         if (mainCommand.getUsage() != null && !this.mainCommand.getUsage().isEmpty() && this.subCommands.isEmpty()) {
             sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax is: ", TextColor.fromHexString("#FBFB00")));
             sender.sendMessage(Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));

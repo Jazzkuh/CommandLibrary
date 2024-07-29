@@ -1,15 +1,22 @@
 package com.jazzkuh.commandlib.spigot;
 
+import com.jazzkuh.commandlib.common.chat.FormattingProvider;
 import com.jazzkuh.commandlib.common.resolvers.CompletionResolverRegistry;
 import com.jazzkuh.commandlib.common.resolvers.ContextResolverRegistry;
 import com.jazzkuh.commandlib.spigot.resolvers.GameModeResolver;
 import com.jazzkuh.commandlib.spigot.resolvers.PlayerResolver;
 import com.jazzkuh.commandlib.spigot.resolvers.WorldResolver;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.GameMode;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 public class SpigotCommandLoader {
+    @Getter
+    @Setter
+    private static FormattingProvider formattingProvider;
+
     public static void loadResolvers() {
         ContextResolverRegistry.registerResolver(Player.class, new PlayerResolver());
         ContextResolverRegistry.registerResolver(GameMode.class, new GameModeResolver());

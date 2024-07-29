@@ -66,7 +66,8 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSource sender, String[] args) {
         if (subCommand.getPermission() != null && !sender.hasPermission(subCommand.getPermission())) {
-            sender.sendMessage(Component.text("You do not have permission to use this command.", TextColor.fromHexString("#FB465C")));
+            PermissionException permissionException = new PermissionException("You do not have permission to use this command.");
+            sender.sendMessage(VelocityCommandLoader.getFormattingProvider().formatError(permissionException, permissionException.getMessage()));
             return;
         }
 
@@ -79,13 +80,13 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
             if (commandException instanceof ArgumentException) {
                 this.formatUsage(sender);
             } else if (commandException instanceof PermissionException permissionException) {
-                sender.sendMessage(Component.text(permissionException.getMessage(), TextColor.fromHexString("#FB465C")));
+                sender.sendMessage(VelocityCommandLoader.getFormattingProvider().formatError(commandException, permissionException.getMessage()));
             } else if (commandException instanceof ContextResolverException contextResolverException) {
-                sender.sendMessage(Component.text("A context resolver was not found for: " + contextResolverException.getMessage(), TextColor.fromHexString("#FB465C")));
+                sender.sendMessage(VelocityCommandLoader.getFormattingProvider().formatError(commandException, "A context resolver was not found for: " + contextResolverException.getMessage()));
             } else if (commandException instanceof ParameterException parameterException) {
-                sender.sendMessage(Component.text(parameterException.getMessage(), TextColor.fromHexString("#FB465C")));
+                sender.sendMessage(VelocityCommandLoader.getFormattingProvider().formatError(commandException, parameterException.getMessage()));
             } else if (commandException instanceof ErrorException errorException) {
-                sender.sendMessage(Component.text("An error occurred while executing this subcommand: " + errorException.getMessage(), TextColor.fromHexString("#FB465C")));
+                sender.sendMessage(VelocityCommandLoader.getFormattingProvider().formatError(commandException, "An error occurred while executing this subcommand: " + errorException.getMessage()));
             }
         }
     }
