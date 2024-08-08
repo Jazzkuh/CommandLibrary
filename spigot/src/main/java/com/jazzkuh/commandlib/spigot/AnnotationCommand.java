@@ -22,9 +22,9 @@ import java.util.Comparator;
 import java.util.List;
 
 public class AnnotationCommand extends Command implements AnnotationCommandImpl {
-    private final String commandName;
-    private AnnotationSubCommand mainCommand = null;
-    private final List<AnnotationSubCommand> subCommands = new ArrayList<>();
+    protected final String commandName;
+    protected AnnotationSubCommand mainCommand = null;
+    protected final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
     public AnnotationCommand() {
         super("__annotation_command__");
