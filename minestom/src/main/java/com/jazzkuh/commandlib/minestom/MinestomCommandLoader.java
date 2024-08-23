@@ -1,8 +1,7 @@
 package com.jazzkuh.commandlib.minestom;
 
 import com.jazzkuh.commandlib.common.chat.FormattingProvider;
-import com.jazzkuh.commandlib.common.resolvers.CompletionResolverRegistry;
-import com.jazzkuh.commandlib.common.resolvers.ContextResolverRegistry;
+import com.jazzkuh.commandlib.common.resolvers.Resolvers;
 import com.jazzkuh.commandlib.minestom.resolvers.GameModeResolver;
 import com.jazzkuh.commandlib.minestom.resolvers.PlayerResolver;
 import com.jazzkuh.commandlib.minestom.terminal.MinestomTerminal;
@@ -24,12 +23,7 @@ public class MinestomCommandLoader {
     }
 
     public static void loadResolvers() {
-        ContextResolverRegistry.registerResolver(Player.class, new PlayerResolver());
-        ContextResolverRegistry.registerResolver(GameMode.class, new GameModeResolver());
-
-        CompletionResolverRegistry.registerResolver(Player.class, new PlayerResolver());
-        CompletionResolverRegistry.registerCompletion("players", new PlayerResolver());
-        CompletionResolverRegistry.registerResolver(GameMode.class, new GameModeResolver());
-        CompletionResolverRegistry.registerCompletion("gamemodes", new GameModeResolver());
+        Resolvers.register(Player.class, new PlayerResolver(), "players");
+        Resolvers.register(GameMode.class, new GameModeResolver(), "gamemodes");
     }
 }

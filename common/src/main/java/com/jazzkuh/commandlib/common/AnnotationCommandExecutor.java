@@ -6,9 +6,8 @@ import com.jazzkuh.commandlib.common.annotations.Main;
 import com.jazzkuh.commandlib.common.annotations.Optional;
 import com.jazzkuh.commandlib.common.exception.*;
 import com.jazzkuh.commandlib.common.resolvers.CompletionResolver;
-import com.jazzkuh.commandlib.common.resolvers.CompletionResolverRegistry;
 import com.jazzkuh.commandlib.common.resolvers.ContextResolver;
-import com.jazzkuh.commandlib.common.resolvers.ContextResolverRegistry;
+import com.jazzkuh.commandlib.common.resolvers.Resolvers;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -33,7 +32,7 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
             Parameter parameter = parameters.get(i);
             Class<?> paramClass = parameter.getType();
 
-            ContextResolver<?> contextResolver = ContextResolverRegistry.getResolver(paramClass);
+            ContextResolver<?> contextResolver = Resolvers.context(paramClass);
             if (contextResolver == null) {
                 if (!paramClass.isEnum()) throw new ContextResolverException(paramClass.getName());
 
@@ -99,13 +98,13 @@ public record AnnotationCommandExecutor<T>(AnnotationSubCommand subCommand, Anno
 
         if (parameter.isAnnotationPresent(Completion.class)) {
             Completion completion = parameter.getAnnotation(Completion.class);
-            CompletionResolver<T> resolver = CompletionResolverRegistry.getCompletion(completion.value());
+            CompletionResolver<T> resolver = Resolvers.completion(completion.value());
             if (resolver != null) {
                 return copyPartialMatches(arg, resolver.resolve(sender, arg), new ArrayList<>(resolver.resolve(sender, arg).size()));
             }
         }
 
-        CompletionResolver<T> completionResolver = CompletionResolverRegistry.getResolver(paramClass);
+        CompletionResolver<T> completionResolver = Resolvers.completion(paramClass);
         if (completionResolver != null) {
             return copyPartialMatches(arg, completionResolver.resolve(sender, arg), new ArrayList<>(completionResolver.resolve(sender, arg).size()));
         } else if (paramClass.isEnum()) {

@@ -5,7 +5,7 @@ import com.jazzkuh.commandlib.common.AnnotationCommandSender;
 import com.jazzkuh.commandlib.common.annotations.*;
 import com.jazzkuh.commandlib.common.exception.*;
 import com.jazzkuh.commandlib.common.resolvers.ContextResolver;
-import com.jazzkuh.commandlib.common.resolvers.ContextResolverRegistry;
+import com.jazzkuh.commandlib.common.resolvers.Resolvers;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -29,7 +29,7 @@ public record JDACommandExecutor<T>(JDASubCommand subCommand, AnnotationCommandI
         for (int i = 1; i < parameters.size(); i++) {
             Parameter parameter = parameters.get(i);
             Class<?> paramClass = parameter.getType();
-            ContextResolver<?> contextResolver = ContextResolverRegistry.getResolver(paramClass);
+            ContextResolver<?> contextResolver = Resolvers.context(paramClass);
             if (contextResolver == null) {
                 if (!paramClass.isEnum()) throw new ContextResolverException(paramClass.getName());
 
