@@ -27,7 +27,7 @@ import java.util.*;
 public class AnnotationCommand extends Command implements AnnotationCommandImpl {
     private static final ComponentLogger LOGGER = ComponentLogger.logger("CommandLibrary");
 
-    protected final String commandName;
+    protected String commandName;
     protected AnnotationSubCommand mainCommand = null;
     protected final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
