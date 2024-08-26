@@ -31,7 +31,12 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     protected AnnotationSubCommand mainCommand = null;
     protected final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
-    @SneakyThrows
+    public AnnotationCommand(String commandName) {
+        super(commandName);
+        this.commandName = commandName;
+        this.init();
+    }
+
     public AnnotationCommand() {
         super("__annotation_command__");
         if (!this.getClass().isAnnotationPresent(com.jazzkuh.commandlib.common.annotations.Command.class)) {
@@ -39,7 +44,11 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         }
 
         this.commandName = this.getClass().getAnnotation(com.jazzkuh.commandlib.common.annotations.Command.class).value();
+        this.init();
+    }
 
+    @SneakyThrows
+    private void init() {
         Field nameField = ReflectionUtils.getFieldByNameIncludingSuperclasses("name", Command.class);
         nameField.setAccessible(true);
         nameField.set(this, this.commandName);
