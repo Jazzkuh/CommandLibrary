@@ -26,6 +26,15 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     protected AnnotationSubCommand mainCommand = null;
     protected final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
+
+    public AnnotationCommand(String commandName) {
+        super(commandName);
+
+        this.commandName = commandName;
+        this.setName(commandName);
+        this.init();
+    }
+
     public AnnotationCommand() {
         super("__annotation_command__");
         if (!this.getClass().isAnnotationPresent(com.jazzkuh.commandlib.common.annotations.Command.class)) {
@@ -34,7 +43,10 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
 
         this.commandName = this.getClass().getAnnotation(com.jazzkuh.commandlib.common.annotations.Command.class).value();
         this.setName(this.commandName);
+        this.init();
+    }
 
+    private void init() {
         List<Method> mainCommands = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Main.class)).toList();
         if (mainCommands.size() > 1) {
             throw new IllegalArgumentException("There can only be one main command per class");
@@ -145,7 +157,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             commandMap.register(plugin.getName(), this);
 
             plugin.getLogger().info("Registered command: " + this.getCommandName());
-            if (this.mainCommand.getAliases().size() > 0) {
+            if (!this.mainCommand.getAliases().isEmpty()) {
                 plugin.getLogger().info("- Registered aliases: " + String.join(", ", this.getAliases()));
             }
         } catch (Exception exception) {
@@ -154,13 +166,13 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     }
 
     protected void formatUsage(CommandSender sender) {
-        if (mainCommand.getUsage() != null && this.mainCommand.getUsage().length() > 0 && this.subCommands.isEmpty()) {
+        if (mainCommand.getUsage() != null && !this.mainCommand.getUsage().isEmpty() && this.subCommands.isEmpty()) {
             sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax is: " + this.getCommandName() + this.mainCommand.getUsage(), TextColor.fromHexString("#FBFB00")));
             return;
         }
 
         sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax's are:", TextColor.fromHexString("#FBFB00")));
-        if (mainCommand.getUsage() != null && mainCommand.getUsage().length() > 0) {
+        if (mainCommand.getUsage() != null && !mainCommand.getUsage().isEmpty()) {
             sender.sendMessage(Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
         }
 
