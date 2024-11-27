@@ -37,6 +37,12 @@ public class Resolvers {
         }
     }
 
+    public static void register(Object resolver, String... completions) {
+        for (String completion : completions) {
+            completionStrings.put(completion, (CompletionResolver<?>) resolver);
+        }
+    }
+
     public static ContextResolver<?> context(Class<?> typeClass) {
         if (typeClass.isArray()) {
             return contextResolvers.get(typeClass.getComponentType());
