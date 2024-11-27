@@ -37,9 +37,9 @@ public class Resolvers {
         }
     }
 
-    public static void register(Object resolver, String... completions) {
+    public static void register(CompletionResolver<?> resolver, String... completions) {
         for (String completion : completions) {
-            completionStrings.put(completion, (CompletionResolver<?>) resolver);
+            completionStrings.put(completion, resolver);
         }
     }
 
