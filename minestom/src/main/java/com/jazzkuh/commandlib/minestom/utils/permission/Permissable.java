@@ -10,9 +10,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Permissable {
     private final UUID uuid;
-    private final boolean console;
 
     public boolean hasPermission(String permission) {
+        if (uuid == null) return true;
         return MinestomCommandLoader.getPermissionProvider().hasPermission(this, permission);
     }
 }

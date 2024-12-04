@@ -93,9 +93,9 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         addSyntax(this::execute, arguments);
         if (this.mainCommand.getPermission() != null) {
             setCondition((commandSender, s) -> {
-                Permissable permissable = new Permissable(null, true);
+                Permissable permissable = new Permissable(null);
                 if (commandSender instanceof Player player) {
-                    permissable = new Permissable(player.getUuid(), false);
+                    permissable = new Permissable(player.getUuid());
                 }
 
                 return permissable.hasPermission(this.mainCommand.getPermission());
@@ -144,10 +144,10 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     }
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSender sender, String[] args) {
-        Permissable permissable = new Permissable(null, true);
+        Permissable permissable = new Permissable(null);
         if (sender instanceof ConsoleSender) sender = new LoggingConsoleSender();
         if (sender instanceof Player player) {
-            permissable = new Permissable(player.getUuid(), false);
+            permissable = new Permissable(player.getUuid());
             LOGGER.info("Command executed by {}: {} {}", player.getUsername(), this.getCommandName(), String.join(" ", args));
         }
 
@@ -180,9 +180,9 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     public List<String> suggest(CommandSender sender, String[] args) {
         AnnotationCommandExecutor<CommandSender> mainCommandExecutor = new AnnotationCommandExecutor<>(this.mainCommand, this);
         AnnotationCommandSender<CommandSender> commandSender = new AnnotationCommandSender<>(sender);
-        Permissable permissable = new Permissable(null, true);
+        Permissable permissable = new Permissable(null);
         if (sender instanceof Player player) {
-            permissable = new Permissable(player.getUuid(), false);
+            permissable = new Permissable(player.getUuid());
         }
 
         List<String> options = new ArrayList<>(mainCommandExecutor.complete(commandSender, args));
@@ -235,9 +235,9 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     }
 
     public void formatUsage(CommandSender sender) {
-        Permissable permissable = new Permissable(null, true);
+        Permissable permissable = new Permissable(null);
         if (sender instanceof Player player) {
-            permissable = new Permissable(player.getUuid(), false);
+            permissable = new Permissable(player.getUuid());
         }
 
         if (mainCommand.getUsage() != null && !this.mainCommand.getUsage().isEmpty() && this.subCommands.isEmpty()) {
