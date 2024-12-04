@@ -6,6 +6,7 @@ import com.jazzkuh.commandlib.common.annotations.Subcommand;
 import com.jazzkuh.commandlib.common.exception.*;
 import com.jazzkuh.commandlib.minestom.terminal.LoggingConsoleSender;
 import com.jazzkuh.commandlib.minestom.utils.StringUtils;
+import com.jazzkuh.commandlib.minestom.utils.permission.Permissable;
 import lombok.SneakyThrows;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -91,7 +92,14 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         setDefaultExecutor(this::execute);
         addSyntax(this::execute, arguments);
         if (this.mainCommand.getPermission() != null) {
-            setCondition((commandSender, s) -> commandSender.hasPermission(this.mainCommand.getPermission()));
+            setCondition((commandSender, s) -> {
+                Permissable permissable = new Permissable(null, true);
+                if (commandSender instanceof Player player) {
+                    permissable = new Permissable(player.getUuid(), false);
+                }
+
+                return permissable.hasPermission(this.mainCommand.getPermission());
+            });
         }
     }
 
@@ -136,12 +144,14 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     }
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSender sender, String[] args) {
+        Permissable permissable = new Permissable(null, true);
         if (sender instanceof ConsoleSender) sender = new LoggingConsoleSender();
         if (sender instanceof Player player) {
+            permissable = new Permissable(player.getUuid(), false);
             LOGGER.info("Command executed by {}: {} {}", player.getUsername(), this.getCommandName(), String.join(" ", args));
         }
 
-        if (subCommand.getPermission() != null && !(sender instanceof ConsoleSender) && !sender.hasPermission(subCommand.getPermission())) {
+        if (subCommand.getPermission() != null && !(sender instanceof ConsoleSender) && !permissable.hasPermission(subCommand.getPermission())) {
             PermissionException permissionException = new PermissionException("You do not have permission to use this command.");
             sender.sendMessage(MinestomCommandLoader.getFormattingProvider().formatError(permissionException, permissionException.getMessage()));
             return;
@@ -170,6 +180,10 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     public List<String> suggest(CommandSender sender, String[] args) {
         AnnotationCommandExecutor<CommandSender> mainCommandExecutor = new AnnotationCommandExecutor<>(this.mainCommand, this);
         AnnotationCommandSender<CommandSender> commandSender = new AnnotationCommandSender<>(sender);
+        Permissable permissable = new Permissable(null, true);
+        if (sender instanceof Player player) {
+            permissable = new Permissable(player.getUuid(), false);
+        }
 
         List<String> options = new ArrayList<>(mainCommandExecutor.complete(commandSender, args));
 
@@ -180,7 +194,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
                     continue;
                 }
 
-                if (commandSender.getSender().hasPermission(subCommand.getPermission()))
+                if (permissable.hasPermission(subCommand.getPermission()))
                     options.add(subCommand.getName());
             }
 
@@ -194,7 +208,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
                     continue;
                 }
 
-                if (commandSender.getSender().hasPermission(subCommand.getPermission()))
+                if (permissable.hasPermission(subCommand.getPermission()))
                     options.add(subCommand.getName());
                 continue;
             }
@@ -221,6 +235,11 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     }
 
     public void formatUsage(CommandSender sender) {
+        Permissable permissable = new Permissable(null, true);
+        if (sender instanceof Player player) {
+            permissable = new Permissable(player.getUuid(), false);
+        }
+
         if (mainCommand.getUsage() != null && !this.mainCommand.getUsage().isEmpty() && this.subCommands.isEmpty()) {
             sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax is: ", TextColor.fromHexString("#FBFB00")));
             sender.sendMessage(Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
@@ -233,7 +252,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         }
 
         for (AnnotationSubCommand subCommand : this.subCommands) {
-            if (subCommand.getPermission() == null || sender.hasPermission(subCommand.getPermission())) {
+            if (subCommand.getPermission() == null || permissable.hasPermission(subCommand.getPermission())) {
                 sender.sendMessage(Component.text("/" + this.getCommandName() + " " + subCommand.getName() + subCommand.getUsage() + " - " + subCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
             }
         }

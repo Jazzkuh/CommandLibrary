@@ -5,6 +5,7 @@ import com.jazzkuh.commandlib.common.resolvers.Resolvers;
 import com.jazzkuh.commandlib.minestom.resolvers.GameModeResolver;
 import com.jazzkuh.commandlib.minestom.resolvers.PlayerResolver;
 import com.jazzkuh.commandlib.minestom.terminal.MinestomTerminal;
+import com.jazzkuh.commandlib.minestom.utils.permission.PermissionProvider;
 import lombok.Getter;
 import lombok.Setter;
 import net.minestom.server.entity.GameMode;
@@ -13,6 +14,9 @@ import net.minestom.server.entity.Player;
 public class MinestomCommandLoader {
     @Getter @Setter
     private static FormattingProvider formattingProvider;
+
+    @Getter @Setter
+    private static PermissionProvider permissionProvider;
 
     public static void startTerminal() {
         MinestomTerminal.start();
