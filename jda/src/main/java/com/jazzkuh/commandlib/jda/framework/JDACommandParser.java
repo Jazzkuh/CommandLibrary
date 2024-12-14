@@ -63,7 +63,7 @@ public class JDACommandParser {
             }
 
             Option option = parameter.getAnnotation(Option.class);
-            commandParameters.add(new CommandParameter(option.value(), option.description(), parameter.isAnnotationPresent(Optional.class), paramClass));
+            commandParameters.add(new CommandParameter(option.value(), option.description(), parameter.isAnnotationPresent(Optional.class), paramClass, parameter));
         }
 
         return new JDASubCommand(name, usage, aliases, description, permission, method, commandParameters);

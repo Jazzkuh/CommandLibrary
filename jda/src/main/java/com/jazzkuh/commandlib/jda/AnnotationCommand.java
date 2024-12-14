@@ -4,6 +4,8 @@ import com.jazzkuh.commandlib.common.AnnotationCommandImpl;
 import com.jazzkuh.commandlib.common.AnnotationCommandSender;
 import com.jazzkuh.commandlib.common.annotations.*;
 import com.jazzkuh.commandlib.common.exception.*;
+import com.jazzkuh.commandlib.common.resolvers.CompletionResolver;
+import com.jazzkuh.commandlib.common.resolvers.Resolvers;
 import com.jazzkuh.commandlib.jda.framework.JDACommandExecutor;
 import com.jazzkuh.commandlib.jda.framework.JDACommandParser;
 import com.jazzkuh.commandlib.jda.framework.JDASubCommand;
@@ -16,6 +18,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandInteraction;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData;
 
@@ -128,12 +131,29 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
                 OptionType type = JDACommandLoader.DEFINITIONS.get(parameter.getType());
                 if (type == null) type = OptionType.STRING;
 
-                subcommandData.addOption(
-                        type,
-                        parameter.getName(),
-                        parameter.getDescription().isEmpty() ? "No description." : parameter.getDescription(),
-                        !parameter.isOptional()
-                );
+                if (parameter.parameter().isAnnotationPresent(Completion.class)) {
+                    Completion completion = parameter.parameter().getAnnotation(Completion.class);
+                    CompletionResolver<?> resolver = Resolvers.completion(completion.value());
+                    List<OptionData> data = new ArrayList<>();
+                    if (resolver != null) {
+                        OptionData optionData = new OptionData(type, parameter.getName(), parameter.getDescription().isEmpty() ? "No description." : parameter.getDescription(), !parameter.isOptional());
+                        for (String choice : resolver.resolve(null, null)) {
+                            String[] split = choice.split("\\|");
+                            optionData.addChoice(split[0], split[1]);
+                        }
+
+                        data.add(optionData);
+                    }
+
+                    subcommandData.addOptions(data);
+                } else {
+                    subcommandData.addOption(
+                            type,
+                            parameter.getName(),
+                            parameter.getDescription().isEmpty() ? "No description." : parameter.getDescription(),
+                            !parameter.isOptional()
+                    );
+                }
             }
             commandData.addSubcommands(subcommandData);
         }
