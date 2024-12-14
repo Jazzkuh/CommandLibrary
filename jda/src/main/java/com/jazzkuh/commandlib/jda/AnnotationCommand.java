@@ -116,12 +116,29 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
                 OptionType type = JDACommandLoader.DEFINITIONS.get(parameter.getType());
                 if (type == null) type = OptionType.STRING;
 
-                commandData.addOption(
-                        type,
-                        parameter.getName(),
-                        parameter.getDescription().isEmpty() ? "No description." : parameter.getDescription(),
-                        !parameter.isOptional()
-                );
+                if (parameter.parameter().isAnnotationPresent(Completion.class)) {
+                    Completion completion = parameter.parameter().getAnnotation(Completion.class);
+                    CompletionResolver<?> resolver = Resolvers.completion(completion.value());
+                    List<OptionData> data = new ArrayList<>();
+                    if (resolver != null) {
+                        OptionData optionData = new OptionData(type, parameter.getName(), parameter.getDescription().isEmpty() ? "No description." : parameter.getDescription(), !parameter.isOptional());
+                        for (String choice : resolver.resolve(null, null)) {
+                            String[] split = choice.split("\\|");
+                            optionData.addChoice(split[0], split[1]);
+                        }
+
+                        data.add(optionData);
+                    }
+
+                    commandData.addOptions(data);
+                } else {
+                    commandData.addOption(
+                            type,
+                            parameter.getName(),
+                            parameter.getDescription().isEmpty() ? "No description." : parameter.getDescription(),
+                            !parameter.isOptional()
+                    );
+                }
             }
         }
 
