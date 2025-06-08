@@ -18,7 +18,7 @@ import java.util.List;
 
 public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
     protected final String commandName;
-    protected AnnotationSubCommand mainCommand = null;
+    protected final List<AnnotationSubCommand> mainCommands = new ArrayList<>();
     protected final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
     public AnnotationCommand() {
@@ -28,11 +28,8 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
 
         this.commandName = this.getClass().getAnnotation(com.jazzkuh.commandlib.common.annotations.Command.class).value();
 
-        List<Method> mainCommands = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Main.class)).toList();
-        if (mainCommands.size() > 1) {
-            throw new IllegalArgumentException("There can only be one main command per class");
-        }
-        mainCommands.forEach(method -> this.mainCommand = AnnotationCommandParser.parse(this, method));
+        List<Method> mainCommandMethods = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Main.class)).toList();
+        mainCommandMethods.forEach(method -> this.mainCommands.add(AnnotationCommandParser.parse(this, method)));
 
         List<Method> subcommandMethods = Arrays.stream(this.getClass().getMethods()).filter(method -> method.isAnnotationPresent(Subcommand.class)).toList();
         subcommandMethods.forEach(method -> this.subCommands.add(AnnotationCommandParser.parse(this, method)));
@@ -49,12 +46,17 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
         CommandSource sender = invocation.source();
 
         if (args.length < 1) {
-            if (this.mainCommand == null) {
+            if (this.mainCommands.isEmpty()) {
                 this.formatUsage(sender);
                 return;
             }
 
-            this.executeCommand(this.mainCommand, sender, args);
+            if (this.mainCommands.size() == 1) {
+                this.executeCommand(this.mainCommands.get(0), sender, args);
+                return;
+            }
+
+            this.formatUsage(sender);
             return;
         }
 
@@ -64,7 +66,17 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
             return;
         }
 
-        this.executeCommand(this.mainCommand, sender, args);
+        if (!this.mainCommands.isEmpty()) {
+            if (this.mainCommands.size() == 1) {
+                this.executeCommand(this.mainCommands.get(0), sender, args);
+                return;
+            }
+
+            this.formatUsage(sender);
+            return;
+        }
+
+        this.formatUsage(sender);
     }
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSource sender, String[] args) {
@@ -98,12 +110,17 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
     public List<String> suggest(Invocation invocation) {
         String[] args = invocation.arguments();
         CommandSource sender = invocation.source();
-        AnnotationCommandExecutor<CommandSource> mainCommandExecutor = new AnnotationCommandExecutor<>(this.mainCommand, this);
+        List<String> options = new ArrayList<>();
         AnnotationCommandSender<CommandSource> commandSender = new AnnotationCommandSender<>(sender);
 
-        List<String> options = new ArrayList<>(mainCommandExecutor.complete(commandSender, args));
+        for (AnnotationSubCommand mainCommand : this.mainCommands) {
+            if (mainCommand.getPermission() == null || sender.hasPermission(mainCommand.getPermission())) {
+                AnnotationCommandExecutor<CommandSource> mainCommandExecutor = new AnnotationCommandExecutor<>(mainCommand, this);
+                options.addAll(mainCommandExecutor.complete(commandSender, args));
+            }
+        }
 
-        if (args.length == 1 && this.subCommands.size() >= 1) {
+        if (args.length == 1 && !this.subCommands.isEmpty()) {
             for (AnnotationSubCommand subCommand : this.subCommands) {
                 if (subCommand.getPermission() == null) {
                     options.add(subCommand.getName());
@@ -129,6 +146,7 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
 
             if (!args[0].equalsIgnoreCase(subCommand.getName()) && !subCommand.getAliases().contains(args[0].toLowerCase())) continue;
             AnnotationCommandExecutor<CommandSource> subCommandExecutor = new AnnotationCommandExecutor<>(subCommand, this);
+            if (subCommand.getPermission() != null && !commandSender.getSender().hasPermission(subCommand.getPermission())) continue;
             options.addAll(subCommandExecutor.complete(commandSender, args));
         }
 
@@ -137,28 +155,52 @@ public class AnnotationCommand implements AnnotationCommandImpl, SimpleCommand {
 
     @Override
     public boolean hasPermission(Invocation invocation) {
-        return this.mainCommand.getPermission() == null || invocation.source().hasPermission(this.mainCommand.getPermission());
+        if (this.mainCommands.isEmpty()) {
+            return true;
+        }
+
+        return this.mainCommands.stream().anyMatch(cmd ->
+                cmd.getPermission() == null || invocation.source().hasPermission(cmd.getPermission()));
     }
 
     public void register(CommandManager commandManager) {
-        commandManager.register(commandName, this, this.mainCommand.getAliases().toArray(new String[0]));
+        List<String> allAliases = new ArrayList<>();
+        for (AnnotationSubCommand mainCommand : this.mainCommands) {
+            allAliases.addAll(mainCommand.getAliases());
+        }
+
+        commandManager.register(commandName, this, allAliases.toArray(new String[0]));
     }
 
     protected void formatUsage(CommandSource sender) {
-        if (mainCommand.getUsage() != null && this.mainCommand.getUsage().length() > 0 && this.subCommands.isEmpty()) {
-            sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax is: ", TextColor.fromHexString("#FBFB00")));
-            sender.sendMessage(Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
-            return;
-        }
+        List<String> usageMessages = new ArrayList<>();
 
-        sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax's are:", TextColor.fromHexString("#FBFB00")));
-        if (mainCommand.getUsage() != null && mainCommand.getUsage().length() > 0) {
-            sender.sendMessage(Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
+        for (AnnotationSubCommand mainCommand : this.mainCommands) {
+            if (mainCommand.getPermission() == null || sender.hasPermission(mainCommand.getPermission())) {
+                String usage = "/" + this.getCommandName() + mainCommand.getUsage() + " - " + mainCommand.getDescription();
+                usageMessages.add(usage);
+            }
         }
 
         for (AnnotationSubCommand subCommand : this.subCommands) {
             if (subCommand.getPermission() == null || sender.hasPermission(subCommand.getPermission())) {
-                sender.sendMessage(Component.text("/" + this.getCommandName() + " " + subCommand.getName() + subCommand.getUsage() + " - " + subCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
+                String usage = "/" + this.getCommandName() + " " + subCommand.getName() + subCommand.getUsage() + " - " + subCommand.getDescription();
+                usageMessages.add(usage);
+            }
+        }
+
+        if (usageMessages.isEmpty()) {
+            sender.sendMessage(Component.text("No available command syntaxes.", TextColor.fromHexString("#FF6B6B")));
+            return;
+        }
+
+        if (usageMessages.size() == 1) {
+            sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax is: ", TextColor.fromHexString("#FBFB00")));
+            sender.sendMessage(Component.text(usageMessages.get(0), TextColor.fromHexString("#FBFB00")));
+        } else {
+            sender.sendMessage(Component.text("Invalid command syntax. Correct command syntax's are:", TextColor.fromHexString("#FBFB00")));
+            for (String usage : usageMessages) {
+                sender.sendMessage(Component.text(usage, TextColor.fromHexString("#FBFB00")));
             }
         }
     }
