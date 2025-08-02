@@ -2,8 +2,11 @@ package com.jazzkuh.commandlib.minestom;
 
 import com.jazzkuh.commandlib.common.*;
 import com.jazzkuh.commandlib.common.annotations.Main;
+import com.jazzkuh.commandlib.common.annotations.Optional;
 import com.jazzkuh.commandlib.common.annotations.Subcommand;
 import com.jazzkuh.commandlib.common.exception.*;
+import com.jazzkuh.commandlib.common.resolvers.ContextResolver;
+import com.jazzkuh.commandlib.common.resolvers.Resolvers;
 import com.jazzkuh.commandlib.minestom.terminal.LoggingConsoleSender;
 import com.jazzkuh.commandlib.minestom.utils.StringUtils;
 import com.jazzkuh.commandlib.minestom.utils.permission.Permissable;
@@ -23,7 +26,10 @@ import org.codehaus.plexus.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class AnnotationCommand extends Command implements AnnotationCommandImpl {
     private static final ComponentLogger LOGGER = ComponentLogger.logger("CommandLibrary");
@@ -57,7 +63,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         List<Method> mainCommandMethods = Arrays.stream(this.getClass().getMethods())
                 .filter(method -> method.isAnnotationPresent(Main.class))
                 .toList();
-        
+
         mainCommandMethods.forEach(method -> this.mainCommands.add(AnnotationCommandParser.parse(this, method)));
 
         List<String> allAliases = new ArrayList<>();
@@ -98,7 +104,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
 
         setDefaultExecutor(this::execute);
         addSyntax(this::execute, params);
-        
+
         boolean allMainCommandsHavePermissions = !this.mainCommands.isEmpty() &&
                 this.mainCommands.stream().allMatch(cmd -> cmd.getPermission() != null);
 
@@ -153,12 +159,118 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             return;
         }
 
-        for (AnnotationSubCommand mainCommand : mainCommands) {
-            this.executeCommand(mainCommand, sender, args);
-            return;
+        AnnotationSubCommand matchingCommand = findMatchingMainCommand(args);
+        if (matchingCommand != null) {
+            this.executeCommand(matchingCommand, sender, args);
+        } else {
+            this.formatUsage(sender);
+        }
+    }
+
+    private AnnotationSubCommand findMatchingMainCommand(String[] args) {
+        if (mainCommands.size() == 1) {
+            return mainCommands.get(0);
         }
 
-        this.formatUsage(sender);
+        for (AnnotationSubCommand mainCommand : mainCommands) {
+            if (canCommandHandleArgs(mainCommand, args)) {
+                return mainCommand;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean canCommandHandleArgs(AnnotationSubCommand command, String[] args) {
+        Method method = command.getMethod();
+        Parameter[] parameters = method.getParameters();
+
+        int requiredParamCount = 0;
+        int totalParamCount = parameters.length - 1;
+
+        for (int i = 1; i < parameters.length; i++) {
+            if (!parameters[i].isAnnotationPresent(Optional.class)) {
+                requiredParamCount++;
+            }
+        }
+
+        if (args.length < requiredParamCount || args.length > totalParamCount) {
+            return false;
+        }
+
+        for (int i = 0; i < args.length && i + 1 < parameters.length; i++) {
+            Parameter param = parameters[i + 1];
+            Class<?> paramType = param.getType();
+            String arg = args[i];
+
+            if (!isArgCompatibleWithType(arg, paramType)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isArgCompatibleWithType(String arg, Class<?> type) {
+        if (type == int.class || type == Integer.class) {
+            try {
+                Integer.parseInt(arg);
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        if (type == double.class || type == Double.class) {
+            try {
+                Double.parseDouble(arg);
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        if (type == float.class || type == Float.class) {
+            try {
+                Float.parseFloat(arg);
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        if (type == long.class || type == Long.class) {
+            try {
+                Long.parseLong(arg);
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+
+        if (type == boolean.class || type == Boolean.class) {
+            return "true".equalsIgnoreCase(arg) || "false".equalsIgnoreCase(arg);
+        }
+
+        if (type.isEnum()) {
+            try {
+                Enum.valueOf((Class<? extends Enum>) type, arg.toUpperCase());
+                return true;
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        }
+
+        ContextResolver<?> resolver = Resolvers.context(type);
+        if (resolver != null) {
+            try {
+                return resolver.resolve(arg) != null;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        return type == String.class;
     }
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSender sender, String[] args) {

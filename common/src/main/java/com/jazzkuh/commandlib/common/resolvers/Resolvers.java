@@ -16,10 +16,15 @@ public class Resolvers {
     static {
         contextResolvers.put(String.class, new StringResolver());
         contextResolvers.put(Boolean.class, new BooleanResolver());
+        contextResolvers.put(boolean.class, new BooleanResolver());
         contextResolvers.put(Integer.class, new IntegerResolver());
+        contextResolvers.put(int.class, new IntegerResolver());
         contextResolvers.put(Double.class, new DoubleResolver());
+        contextResolvers.put(double.class, new DoubleResolver());
         contextResolvers.put(Long.class, new LongResolver());
+        contextResolvers.put(long.class, new LongResolver());
         contextResolvers.put(Float.class, new FloatResolver());
+        contextResolvers.put(float.class, new FloatResolver());
         contextResolvers.put(UUID.class, new UUIDResolver());
     }
 
