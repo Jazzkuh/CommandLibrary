@@ -15,6 +15,7 @@
         <module>velocity</module>
         <module>minestom</module>
         <module>jda</module>
+        <module>brigadier</module>
     </modules>
 
     <properties>
