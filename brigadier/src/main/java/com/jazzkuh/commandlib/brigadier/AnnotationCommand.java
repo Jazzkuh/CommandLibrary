@@ -19,19 +19,22 @@ import java.util.List;
 public abstract class AnnotationCommand<S> implements AnnotationCommandImpl {
     private static final ComponentLogger LOGGER = ComponentLogger.logger("CommandLibrary");
 
+    protected BrigadierCommandLoader<S> commandLoader;
     protected String commandName;
     protected AnnotationSubCommand mainCommand = null;
     protected final List<AnnotationSubCommand> subCommands = new ArrayList<>();
 
-    public AnnotationCommand(String commandName) {
+    public AnnotationCommand(BrigadierCommandLoader<S> commandLoader, String commandName) {
+        this.commandLoader = commandLoader;
         this.commandName = commandName;
     }
 
-    public AnnotationCommand() {
+    public AnnotationCommand(BrigadierCommandLoader<S> commandLoader) {
         if (!this.getClass().isAnnotationPresent(com.jazzkuh.commandlib.common.annotations.Command.class)) {
             throw new IllegalArgumentException("AnnotationCommand needs to have a @Command annotation!");
         }
 
+        this.commandLoader = commandLoader;
         this.commandName = this.getClass().getAnnotation(com.jazzkuh.commandlib.common.annotations.Command.class).value();
     }
 
@@ -41,7 +44,7 @@ public abstract class AnnotationCommand<S> implements AnnotationCommandImpl {
     }
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSource<S> source, String[] args) {
-        CommandSourceProvider sourceProvider = BrigadierCommandLoader.getCommandSourceProvider();
+        CommandSourceProvider sourceProvider = commandLoader.getCommandSourceProvider();
         if (subCommand.getPermission() != null && !sourceProvider.hasPermission(source, subCommand.getPermission())) {
             PermissionException permissionException = new PermissionException("You do not have permission to use this command.");
             sourceProvider.sendMessage(source, BrigadierCommandLoader.getFormattingProvider().formatError(permissionException, permissionException.getMessage()));
@@ -100,7 +103,7 @@ public abstract class AnnotationCommand<S> implements AnnotationCommandImpl {
     }
 
     public void formatUsage(CommandSource<S> source) {
-        CommandSourceProvider sourceProvider = BrigadierCommandLoader.getCommandSourceProvider();
+        CommandSourceProvider sourceProvider = commandLoader.getCommandSourceProvider();
         if (mainCommand.getUsage() != null && !this.mainCommand.getUsage().isEmpty() && this.subCommands.isEmpty()) {
             sourceProvider.sendMessage(source, Component.text("Invalid command syntax. Correct command syntax is: ", TextColor.fromHexString("#FBFB00")));
             sourceProvider.sendMessage(source, Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
