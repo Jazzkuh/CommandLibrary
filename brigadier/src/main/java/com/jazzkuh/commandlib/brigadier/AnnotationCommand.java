@@ -44,7 +44,7 @@ public abstract class AnnotationCommand<S> implements AnnotationCommandImpl {
     }
 
     private void executeCommand(AnnotationSubCommand subCommand, CommandSource<S> source, String[] args) {
-        CommandSourceProvider sourceProvider = commandLoader.getCommandSourceProvider();
+        CommandSourceProvider<S> sourceProvider = commandLoader.getCommandSourceProvider();
         if (subCommand.getPermission() != null && !sourceProvider.hasPermission(source, subCommand.getPermission())) {
             PermissionException permissionException = new PermissionException("You do not have permission to use this command.");
             sourceProvider.sendMessage(source, BrigadierCommandLoader.getFormattingProvider().formatError(permissionException, permissionException.getMessage()));
@@ -103,7 +103,7 @@ public abstract class AnnotationCommand<S> implements AnnotationCommandImpl {
     }
 
     public void formatUsage(CommandSource<S> source) {
-        CommandSourceProvider sourceProvider = commandLoader.getCommandSourceProvider();
+        CommandSourceProvider<S> sourceProvider = commandLoader.getCommandSourceProvider();
         if (mainCommand.getUsage() != null && !this.mainCommand.getUsage().isEmpty() && this.subCommands.isEmpty()) {
             sourceProvider.sendMessage(source, Component.text("Invalid command syntax. Correct command syntax is: ", TextColor.fromHexString("#FBFB00")));
             sourceProvider.sendMessage(source, Component.text("/" + this.getCommandName() + this.mainCommand.getUsage() + " - " + this.mainCommand.getDescription(), TextColor.fromHexString("#FBFB00")));
