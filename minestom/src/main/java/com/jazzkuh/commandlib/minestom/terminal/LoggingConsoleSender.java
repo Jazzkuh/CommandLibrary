@@ -1,7 +1,5 @@
 package com.jazzkuh.commandlib.minestom.terminal;
 
-import net.kyori.adventure.audience.MessageType;
-import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -18,7 +16,7 @@ public class LoggingConsoleSender extends ConsoleSender {
 
     @Override
     @SuppressWarnings("all")
-    public void sendMessage(@NotNull Identity source, @NotNull Component message, @NotNull MessageType type) {
+    public void sendMessage(@NotNull Component message) {
         LOGGER.info(TerminalColorConverter.format(PlainTextComponentSerializer.plainText().serialize(message)));
     }
 }
