@@ -15,6 +15,11 @@ subprojects {
 
     tasks.withType<JavaCompile>().configureEach {
         options.encoding = "UTF-8"
+        // Target Java 21 bytecode for the modules shaded into Paper plugins so they
+        // load on Java 21+ servers. Other platforms (e.g. minestom) need Java 25.
+        if (project.name in listOf("spigot", "common")) {
+            options.release.set(21)
+        }
         options.compilerArgs.add("-parameters")
     }
 
