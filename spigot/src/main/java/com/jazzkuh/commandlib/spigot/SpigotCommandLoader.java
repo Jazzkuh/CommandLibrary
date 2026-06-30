@@ -16,6 +16,10 @@ public class SpigotCommandLoader {
     @Setter
     private static FormattingProvider formattingProvider;
 
+    @Getter
+    @Setter
+    private static boolean debug = true;
+
     public static void loadResolvers() {
         Resolvers.register(Player.class, new PlayerResolver());
         Resolvers.register(GameMode.class, new GameModeResolver());

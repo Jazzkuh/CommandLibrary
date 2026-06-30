@@ -18,6 +18,9 @@ public class MinestomCommandLoader {
     @Getter @Setter
     private static PermissionProvider permissionProvider;
 
+    @Getter @Setter
+    private static boolean debug = true;
+
     public static void startTerminal() {
         MinestomTerminal.start();
     }

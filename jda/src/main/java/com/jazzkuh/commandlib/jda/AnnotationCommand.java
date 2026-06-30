@@ -95,7 +95,7 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
 
         try {
             commandExecutor.execute(commandSender, args);
-            System.out.println("Executed command " + subCommand.getName());
+            if (JDACommandLoader.isDebug()) System.out.println("Executed command " + subCommand.getName());
         } catch (CommandException commandException) {
             switch (commandException) {
                 case ArgumentException ignored -> event.reply("Not enough arguments.").queue();
@@ -175,7 +175,7 @@ public class AnnotationCommand extends ListenerAdapter implements AnnotationComm
             commandData.addSubcommands(subcommandData);
         }
 
-        System.out.println("Registered command " + commandName);
+        if (JDACommandLoader.isDebug()) System.out.println("Registered command " + commandName);
         JDACommandLoader.getToPropagate().add(commandData);
     }
 }

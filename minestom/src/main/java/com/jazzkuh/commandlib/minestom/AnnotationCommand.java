@@ -278,7 +278,9 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
         if (sender instanceof ConsoleSender) sender = new LoggingConsoleSender();
         if (sender instanceof Player player) {
             permissable = new Permissable(player.getUuid());
-            LOGGER.info("Command executed by {}: {} {}", player.getUsername(), this.getCommandName(), String.join(" ", args));
+            if (MinestomCommandLoader.isDebug()) {
+                LOGGER.info("Command executed by {}: {} {}", player.getUsername(), this.getCommandName(), String.join(" ", args));
+            }
         }
 
         if (subCommand.getPermission() != null && !(sender instanceof ConsoleSender) && !permissable.hasPermission(subCommand.getPermission())) {
@@ -361,9 +363,11 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     public void register(CommandManager commandManager) {
         try {
             commandManager.register(this);
-            LOGGER.info("Registered command: {}", this.getCommandName());
-            if (!Arrays.stream(this.getAliases()).toList().isEmpty()) {
-                LOGGER.info("- Registered aliases: {}", String.join(", ", this.getAliases()));
+            if (MinestomCommandLoader.isDebug()) {
+                LOGGER.info("Registered command: {}", this.getCommandName());
+                if (!Arrays.stream(this.getAliases()).toList().isEmpty()) {
+                    LOGGER.info("- Registered aliases: {}", String.join(", ", this.getAliases()));
+                }
             }
         } catch (Exception exception) {
             LOGGER.info("Unable to register command: {}", this.getCommandName());

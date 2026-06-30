@@ -180,9 +180,11 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
             commandMap.register(plugin.getName(), this);
 
-            plugin.getLogger().info("Registered command: " + this.getCommandName());
-            if (!allAliases.isEmpty()) {
-                plugin.getLogger().info("- Registered aliases: " + String.join(", ", allAliases));
+            if (SpigotCommandLoader.isDebug()) {
+                plugin.getLogger().info("Registered command: " + this.getCommandName());
+                if (!allAliases.isEmpty()) {
+                    plugin.getLogger().info("- Registered aliases: " + String.join(", ", allAliases));
+                }
             }
         } catch (Exception exception) {
             plugin.getLogger().severe("Unable to register command: " + this.getCommandName());

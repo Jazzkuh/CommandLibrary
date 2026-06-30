@@ -1,6 +1,7 @@
 package com.jazzkuh.commandlib.jda;
 
 import lombok.Getter;
+import lombok.Setter;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
@@ -15,6 +16,8 @@ import java.util.Set;
 
 public class JDACommandLoader {
 	private static final @Getter Set<CommandData> toPropagate = new HashSet<>();
+	@Getter @Setter
+	private static boolean debug = true;
 	public static final Map<Class<?>, OptionType> DEFINITIONS;
 
 	static {
@@ -36,7 +39,7 @@ public class JDACommandLoader {
 	public static void propagate(JDA jda) {
 		CommandListUpdateAction action = jda.updateCommands();
 		action.addCommands(toPropagate).complete();
-		System.out.println("Propagated " + toPropagate.size() + " commands.");
+		if (debug) System.out.println("Propagated " + toPropagate.size() + " commands.");
 		toPropagate.clear();
 	}
 }
