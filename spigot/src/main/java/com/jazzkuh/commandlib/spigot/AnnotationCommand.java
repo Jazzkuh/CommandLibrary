@@ -11,15 +11,15 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class AnnotationCommand extends Command implements AnnotationCommandImpl {
 
@@ -76,9 +76,19 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             return true;
         }
 
+        AnnotationSubCommand match = null;
+        int matchLength = 0;
         for (AnnotationSubCommand subCommand : subCommands) {
-            if (!args[0].equalsIgnoreCase(subCommand.getName()) && !subCommand.getAliases().contains(args[0].toLowerCase())) continue;
-            this.executeCommand(subCommand, sender, args);
+            int length = matchLength(subCommand, args);
+            if (length > matchLength) {
+                match = subCommand;
+                matchLength = length;
+            }
+        }
+
+        if (match != null) {
+            String[] effectiveArgs = matchLength > 1 ? collapse(args, matchLength, match.getName()) : args;
+            this.executeCommand(match, sender, effectiveArgs);
             return true;
         }
 
@@ -126,7 +136,7 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
     @Override
     @NotNull
     public List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) {
-        List<String> options = new ArrayList<>();
+        Set<String> options = new LinkedHashSet<>();
         AnnotationCommandSender<CommandSender> commandSender = new AnnotationCommandSender<>(sender);
 
         for (AnnotationSubCommand mainCommand : this.mainCommands) {
@@ -136,26 +146,60 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             }
         }
 
-        if (args.length == 1 && !this.subCommands.isEmpty()) {
-            for (AnnotationSubCommand subCommand : this.subCommands) {
-                if (subCommand.getPermission() == null) {
-                    options.add(subCommand.getName());
-                    continue;
-                }
-
-                if (commandSender.getSender().hasPermission(subCommand.getPermission())) options.add(subCommand.getName());
-            }
-
-            return StringUtil.copyPartialMatches(args[0], options, new ArrayList<>(options.size()));
-        }
+        int index = args.length - 1;
+        if (index < 0) return new ArrayList<>(options);
+        String partial = args[index];
 
         for (AnnotationSubCommand subCommand : this.subCommands) {
-            if (!args[0].equalsIgnoreCase(subCommand.getName()) && !subCommand.getAliases().contains(args[0].toLowerCase())) continue;
-            AnnotationCommandExecutor<CommandSender> subCommandExecutor = new AnnotationCommandExecutor<>(subCommand, this);
-            if (subCommand.getPermission() != null && !commandSender.getSender().hasPermission(subCommand.getPermission())) continue;
-            options.addAll(subCommandExecutor.complete(commandSender, args));
+            if (subCommand.getPermission() != null && !sender.hasPermission(subCommand.getPermission())) continue;
+            String[] name = nameTokens(subCommand);
+
+            if (name.length <= index && prefixMatches(args, name, name.length)) {
+                String[] effectiveArgs = name.length > 1 ? collapse(args, name.length, subCommand.getName()) : args;
+                AnnotationCommandExecutor<CommandSender> subCommandExecutor = new AnnotationCommandExecutor<>(subCommand, this);
+                options.addAll(subCommandExecutor.complete(commandSender, effectiveArgs));
+            } else if (name.length > index && prefixMatches(args, name, index)
+                    && startsWithIgnoreCase(name[index], partial)) {
+                options.add(name[index]);
+            }
+
+            if (index == 0) {
+                for (String subAlias : subCommand.getAliases()) {
+                    if (startsWithIgnoreCase(subAlias, partial)) options.add(subAlias);
+                }
+            }
         }
-        return options;
+        return new ArrayList<>(options);
+    }
+
+    private static String[] nameTokens(AnnotationSubCommand subCommand) {
+        return subCommand.getName().trim().split("\\s+");
+    }
+
+    private static boolean prefixMatches(String[] args, String[] name, int count) {
+        if (args.length < count || name.length < count) return false;
+        for (int i = 0; i < count; i++) {
+            if (!name[i].equalsIgnoreCase(args[i])) return false;
+        }
+        return true;
+    }
+
+    private static int matchLength(AnnotationSubCommand subCommand, String[] args) {
+        String[] name = nameTokens(subCommand);
+        if (name.length <= args.length && prefixMatches(args, name, name.length)) return name.length;
+        if (args.length >= 1 && subCommand.getAliases().contains(args[0].toLowerCase())) return 1;
+        return 0;
+    }
+
+    private static String[] collapse(String[] args, int count, String name) {
+        String[] collapsed = new String[args.length - count + 1];
+        collapsed[0] = name;
+        System.arraycopy(args, count, collapsed, 1, args.length - count);
+        return collapsed;
+    }
+
+    private static boolean startsWithIgnoreCase(String value, String prefix) {
+        return value.length() >= prefix.length() && value.regionMatches(true, 0, prefix, 0, prefix.length());
     }
 
     public void register(JavaPlugin plugin) {
@@ -180,9 +224,11 @@ public class AnnotationCommand extends Command implements AnnotationCommandImpl 
             CommandMap commandMap = (CommandMap) bukkitCommandMap.get(Bukkit.getServer());
             commandMap.register(plugin.getName(), this);
 
-            plugin.getLogger().info("Registered command: " + this.getCommandName());
-            if (!allAliases.isEmpty()) {
-                plugin.getLogger().info("- Registered aliases: " + String.join(", ", allAliases));
+            if (SpigotCommandLoader.isDebug()) {
+                plugin.getLogger().info("Registered command: " + this.getCommandName());
+                if (!allAliases.isEmpty()) {
+                    plugin.getLogger().info("- Registered aliases: " + String.join(", ", allAliases));
+                }
             }
         } catch (Exception exception) {
             plugin.getLogger().severe("Unable to register command: " + this.getCommandName());
